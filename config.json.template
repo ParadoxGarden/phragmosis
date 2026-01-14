@@ -1,5 +1,8 @@
 {
-  did_allowlist = [did:plc:ewvi7nxzyoun6zhxrhs64oiz"],
-  discord_guild_id = 613425648685547541,
-  hostname = "example.com",
+  "did_allowlist": [did:plc:ewvi7nxzyoun6zhxrhs64oiz"],
+  "discord_guild_id":  "613425648685547541",
+  "discord_client_id": "",
+  "discord_client_secret": "",
+  "tailscale_sock": "/var/run/tailscale/tailscaled.sock",
+  "hostname": "example.com",
 }

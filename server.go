@@ -17,12 +17,11 @@ func loadFile(path string) []byte {
 	}
 	return dat
 }
-
+var discord_redirect_string = "https://discord.com/oauth2/authorize?client_id=%s&response_type=code&redirect_uri=https://%s/auth&scope=guilds"
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-	discord_redirect_string := fmt.Sprint("https://discord.com/oauth2/authorize?client_id=1460989471494377678&response_type=code&redirect_uri=https://%s/auth&scope=guilds", cfg["hostname"])
 	tmpl := template.Must(template.ParseFiles("./static/login.html"))
 	tmpl.Execute(w, map[string]string{
-		"DiscordRedirect": discord_redirect_string,
+		"DiscordRedirect": fmt.Sprintf(discord_redirect_string, cfg["discord_client_id"], cfg["hostname"]),
 		"ATProtoRedirect": "",
 	})
 
