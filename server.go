@@ -2,12 +2,15 @@ package main
 
 import (
 	// "fmt"
+	"encoding/json"
+	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
 )
 
-func loadPageFromDisk(path string) []byte {
+func loadFile(path string) []byte {
 	dat, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatal("File not found at:", path)
@@ -16,25 +19,33 @@ func loadPageFromDisk(path string) []byte {
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write(loadPageFromDisk("./static/login.html"))
+	discord_redirect_string := fmt.Sprint("https://discord.com/oauth2/authorize?client_id=1460989471494377678&response_type=code&redirect_uri=https://%s/auth&scope=guilds", cfg["hostname"])
+	tmpl := template.Must(template.ParseFiles("./static/login.html"))
+	tmpl.Execute(w, map[string]string{
+		"DiscordRedirect": discord_redirect_string,
+		"ATProtoRedirect": "",
+	})
+
 }
 
+// callback url
 func authHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 func badHandler(w http.ResponseWriter, r *http.Request) {
-
+	w.Write(loadFile("./static/bad.html"))
 }
 
-// need?
-func goodHandler(w http.ResponseWriter, r *http.Request) {
-
-}
+var cfg map[string]interface{}
 
 func main() {
+
+	if err := json.Unmarshal(loadFile("./config.json"), &cfg); err != nil {
+		panic(err)
+	}
+	fmt.Println(cfg)
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/auth", authHandler)
 	http.HandleFunc("/bad", badHandler)
-	http.HandleFunc("/good", goodHandler) // again, need?
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":10999", nil))
 }
