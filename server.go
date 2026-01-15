@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "fmt"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -17,7 +16,10 @@ func loadFile(path string) []byte {
 	}
 	return dat
 }
-var discord_redirect_string = "https://discord.com/oauth2/authorize?client_id=%s&response_type=code&redirect_uri=https://%s/auth&scope=guilds"
+
+var discord_redirect_string = "https://discord.com/oauth2/authorize?client_id=%s&response_type=code&redirect_uri=https://%s/good&scope=guilds"
+var atproto_redirect_string = "https://?"
+
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("./static/login.html"))
 	tmpl.Execute(w, map[string]string{
@@ -26,10 +28,26 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 }
+func authHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Header.Get("Authorization") == "" {
+		host := r.Header.Get("X-Forwarded-Host")
+		uri := r.Header.Get("X-Forwarded-Uri")
+		original_dest := "https://" + host + uri
+		http.Redirect(w, r, fmt.Sprintf("https://%s/login?redirect=%s", cfg["hostname"], original_dest), http.StatusFound)
+
+	}
+}
 
 // callback url
 func goodHandler(w http.ResponseWriter, r *http.Request) {
-
+	from := r.Header.Get("Referer")
+	if from == "https://discord.com/" { //highly opinionated
+		//oauth !
+		return
+	}else{ // this is probably atproto but i'll get that exact url later
+ 		return
+	}
 }
 func badHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(loadFile("./static/bad.html"))
@@ -43,8 +61,10 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(cfg)
-	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/", loginHandler)
+	http.HandleFunc("/auth", authHandler)
 	http.HandleFunc("/good", goodHandler)
 	http.HandleFunc("/bad", badHandler)
-	log.Fatal(http.ListenAndServe(":10999", nil))
+	fmt.Println("listening on port:", cfg["port"])
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", cfg["port"].(string)), nil))
 }

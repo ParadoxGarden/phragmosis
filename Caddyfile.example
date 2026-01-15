@@ -1,0 +1,7 @@
+example.com {
+        forward_auth auth.example.com {
+                uri /auth
+                copy_headers X-User X-Forwarded-Uri X-Forwarded-Host
+        }
+        reverse_proxy service_ip:service_port
+}
