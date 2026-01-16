@@ -1,5 +1,5 @@
 {
-  "didAllowlist": [did:plc:ewvi7nxzyoun6zhxrhs64oiz"],
+  "didAllowList": [did:plc:ewvi7nxzyoun6zhxrhs64oiz"],
   "discordGuildID":  "613425648685547541",
   "discordClientID": "",
   "discordClientSecret": "",
