@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-type Config struct {
+type config struct {
 	DidAllowList        []string `json:"didAllowList"`
 	DiscordGuildID      *string  `json:"discordGuildID"`
 	DiscordClientID     *string  `json:"discordClientID"`
@@ -18,6 +18,7 @@ type Config struct {
 	DomainName          *string  `json:"domainName"`
 	Subdomain           *string  `json:"subdomain"`
 	Port                *string  `json:"port"`
+	Debug               *bool    `json:"debug"`
 	AllowedDomains      []string `json:"allowedDomains"`
 	HashKey             *string  `json:"hashKey"`
 	BlockKey            *string  `json:"blockKey"`
@@ -25,19 +26,22 @@ type Config struct {
 
 // load precedence no overwrites
 // ENV > config.json > generate
-func loadConfig() Config {
+func loadConfig() config {
 
-	var c Config
-	c = loadFromJson(c)
-	c = loadFromEnv(c)
+	var c config
+	c.loadFromJson()
+	c.loadFromEnv()
 	c.validateConfig()
 	return c
 
 }
-func (c *Config) validateConfig() {
-	_, err := strconv.Atoi(*c.Port)
-	if c.Port == nil || err != nil {
-		log.Fatal("no port provided, unable to start server")
+func (c *config) validateConfig() {
+
+	if c.Port == nil {
+		_, err := strconv.Atoi(*c.Port)
+		if err != nil {
+			log.Fatal("no port provided, unable to start server")
+		}
 	}
 	if len(c.AllowedDomains) == 0 {
 		log.Fatal("no allowed domains specified, server will not do anything")
@@ -50,66 +54,73 @@ func (c *Config) validateConfig() {
 		c.TailscaleSock == nil {
 		log.Fatal("no way to auth specified, server will not do anything")
 	}
+	if c.Debug == nil {
+		c.Debug = new(bool)
+		*c.Debug = false
+	}
 }
-func loadFromEnv(c Config) Config {
-	didList := os.Getenv("DID_ALLOW_LIST")
+func (c *config) loadFromEnv() {
+	didList := os.Getenv("PHRAG_DID_ALLOW_LIST")
 	if didList != "" {
 		c.DidAllowList = strings.Split(didList, ",")
 	}
-	discordGuild := os.Getenv("DISCORD_GUILD_ID")
+	discordGuild := os.Getenv("PHRAG_DISCORD_GUILD_ID")
 	if discordGuild != "" {
 		c.DiscordGuildID = &discordGuild
 	}
-	discordClientID := os.Getenv("DISCORD_CLIENT_ID")
+	discordClientID := os.Getenv("PHRAG_DISCORD_CLIENT_ID")
 	if discordClientID != "" {
 		c.DiscordClientID = &discordClientID
 	}
-	discordClientSecret := os.Getenv("DISCORD_CLIENT_SECRET")
+	discordClientSecret := os.Getenv("PHRAG_DISCORD_CLIENT_SECRET")
 	if discordClientSecret != "" {
 		c.DiscordClientSecret = &discordClientSecret
 	}
-	tailscale := os.Getenv("TAILSCALE_SOCK")
+	tailscale := os.Getenv("PHRAG_TAILSCALE_SOCK")
 	if tailscale != "" {
 		c.TailscaleSock = &tailscale
 	}
-	domain := os.Getenv("DOMAIN_NAME")
+	domain := os.Getenv("PHRAG_DOMAIN_NAME")
 	if domain != "" {
 		c.DomainName = &domain
 	}
-	subdomain := os.Getenv("SUBDOMAIN")
+	subdomain := os.Getenv("PHRAG_SUBDOMAIN")
 	if subdomain != "" {
 		c.Subdomain = &subdomain
 	}
-	port := os.Getenv("PORT")
+	port := os.Getenv("PHRAG_PORT")
 	if port != "" {
 		c.Port = &port
 	}
-	hash := os.Getenv("HASH_KEY")
+	debug := os.Getenv("PHRAG_DEBUG")
+	if debug != "" {
+		b, _ := strconv.ParseBool(debug)
+		// if parseBool throws an error it returns false, which is ok for debug
+		c.Debug = new(bool)
+		*c.Debug = b
+	}
+	hash := os.Getenv("PHRAG_HASH_KEY")
 	if hash != "" {
 		c.HashKey = &hash
 	}
-	block := os.Getenv("BLOCK_KEY")
+	block := os.Getenv("PHRAG_BLOCK_KEY")
 	if block != "" {
 		c.BlockKey = &block
 	}
-	allowedDomains := os.Getenv("ALLOWED_DOMAINS")
+	allowedDomains := os.Getenv("PHRAG_ALLOWED_DOMAINS")
 	if allowedDomains != "" {
 		c.AllowedDomains = strings.Split(allowedDomains, ",")
 	}
-	return c
 }
 
-func loadFromJson(c Config) Config {
+func (c *config) loadFromJson() {
 	configPath := "./config.json"
 	dat, err := os.ReadFile(configPath)
 	if err != nil {
 		fmt.Println(err)
-		return c
 	}
 	err = json.Unmarshal(dat, &c)
 	if err != nil {
 		fmt.Println(err)
-		return c
 	}
-	return c
 }
