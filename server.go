@@ -14,6 +14,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bluesky-social/indigo/atproto/auth/oauth"
+	//"github.com/bluesky-social/indigo/atproto/syntax"
+	"github.com/bluesky-social/indigo/atproto/identity"
 	"github.com/gorilla/securecookie"
 	"golang.org/x/oauth2"
 )
@@ -65,7 +68,7 @@ func (s *server) loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	s.writeCookie(w, "oauthMeta", enc, 300)
 
-	discordURL := s.discordOauthcfg.AuthCodeURL(ometa.CRSFState, oauth2.S256ChallengeOption(ometa.PKCECode))
+	discordURL := s.discordOAuth.AuthCodeURL(ometa.CRSFState, oauth2.S256ChallengeOption(ometa.PKCECode))
 	err = s.loginTemplate.Execute(w, map[string]interface{}{
 		"DiscordRedirect": discordURL,
 		"DiscordVisible":  s.discord,
@@ -143,8 +146,21 @@ func (s *server) writeCookie(w http.ResponseWriter, name string, value string, m
 
 	http.SetCookie(w, c)
 }
-func (s *server) atprotoHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleClientMetadata() (w http.ResponseWriter, r *http.Request) {
+	doc := s.atprotoOAuth.Config.ClientMetadata()
 
+	// if this is is a confidential client, need to set doc.JWKSURI, and implement a handler
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(doc); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	return
+}
+func (s *server) handleResolveDid(w http.ResponseWriter, r *http.Request) {
+
+	//s.didCache.ResolveHandle(r.Context(), )
 }
 
 func (s *server) errorHandler(w http.ResponseWriter, r *http.Request) {
@@ -160,7 +176,7 @@ func (s *server) discordHandler(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, "user metadata validation failed", err, slog.LevelError)
 	}
 	code := r.FormValue("code")
-	token, err := getDiscordToken(r.Context(), s.discordOauthcfg, code, ometa.PKCECode)
+	token, err := getDiscordToken(r.Context(), s.discordOAuth, code, ometa.PKCECode)
 	if err != nil {
 		s.fail(w, r, "token did not pass validation", err, slog.LevelError)
 		s.writeCookie(w, "token", "", 604800)
@@ -192,7 +208,7 @@ func (s *server) discordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, g := range guilds {
 		if *s.cfg.DiscordGuildID == g.ID {
-			s.writeCookie(w, "token", enc, int(time.Hour) * 24 * 7)
+			s.writeCookie(w, "token", enc, int(time.Hour)*24*7)
 			slog.Log(r.Context(), slog.LevelInfo, "successful flow, user has logged in correctly")
 			http.Redirect(w, r, "https://"+ometa.Redirect, http.StatusFound)
 			return
@@ -207,11 +223,13 @@ type server struct {
 	selfDomain       string
 	loginTemplate    template.Template
 	errorTemplate    template.Template
-	discordOauthcfg  oauth2.Config
+	discordOAuth     oauth2.Config
 	discordEndpoints oauth2.Endpoint
 	discord          bool
-	atproto          bool
 	cl               http.Client
+	atproto          bool
+	atprotoOAuth     *oauth.ClientApp
+	didCache         *identity.CacheDirectory
 }
 
 //go:embed static/*
@@ -220,7 +238,9 @@ var static embed.FS
 //go:embed templates/*
 var templates embed.FS
 
-func initServ(c config, cookie securecookie.SecureCookie, client http.Client, loginTemplate template.Template, errorTemplate template.Template) *server {
+const SEVEN_DAYS = time.Hour * 24 * 7
+
+func newServer(c config, cookie securecookie.SecureCookie, client http.Client, loginTemplate template.Template, errorTemplate template.Template) *server {
 
 	s := &server{
 		cfg:           c,
@@ -236,6 +256,28 @@ func initServ(c config, cookie securecookie.SecureCookie, client http.Client, lo
 	}
 	if c.DidAllowList != nil {
 		s.atproto = true
+		// cache limit set to 10k max default, might not matter to uncap?
+		cd := identity.NewCacheDirectory(&identity.BaseDirectory{}, 10000, SEVEN_DAYS, SEVEN_DAYS, SEVEN_DAYS)
+		s.didCache = &cd
+		config := oauth.NewPublicConfig(
+			"https://app.example.com/client-metadata.json",
+			"https://app.example.com/oauth/callback",
+			[]string{"atproto", "repo:app.bsky.feed.post?action=create"},
+		)
+
+		// clients are "public" by default, but if they have secure access to a secret attestation key can be "confidential"
+		//	if CLIENT_SECRET_KEY != "" {
+		//		priv, err := crypto.ParsePrivateMultibase(CLIENT_SECRET_KEY)
+		//		if err != nil {
+		//			return err
+		//		}
+		//		if err := config.SetClientSecret(priv, "example1"); err != nil {
+		//			return err
+		//		}
+		//	}
+
+		s.atprotoOAuth = oauth.NewClientApp(&config, oauth.NewMemStore())
+
 	} else {
 		s.atproto = false
 	}
@@ -244,7 +286,7 @@ func initServ(c config, cookie securecookie.SecureCookie, client http.Client, lo
 			AuthURL:  "https://discord.com/oauth2/authorize",
 			TokenURL: "https://discord.com/api/oauth2/token",
 		}
-		s.discordOauthcfg = oauth2.Config{
+		s.discordOAuth = oauth2.Config{
 			ClientID:     *c.DiscordClientID,
 			ClientSecret: *c.DiscordClientSecret,
 			Scopes:       []string{"identify", "guilds"},
@@ -283,11 +325,12 @@ func main() {
 	if err != nil {
 		log.Fatal("embedded html FAILED: ", err)
 	}
-	s := initServ(*c, *cookie, *cl, *loginTemplate, *errorTemplate)
+	s := newServer(*c, *cookie, *cl, *loginTemplate, *errorTemplate)
 	http.HandleFunc("/", s.loginHandler)
 	http.HandleFunc("/auth", s.authHandler)
 	http.HandleFunc("/callback/discord", s.discordHandler)
-	http.HandleFunc("/callback/@proto", s.atprotoHandler)
+	//http.HandleFunc("/callback/@proto", s.atprotoHandler)
+	http.HandleFunc("/resolveDid", s.handleResolveDid)
 	http.HandleFunc("/error", s.errorHandler)
 	content, err := fs.Sub(static, "static")
 	if err != nil {

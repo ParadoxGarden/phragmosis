@@ -19,7 +19,6 @@ type config struct {
 	Subdomain           *string  `json:"subdomain"`
 	Port                *string  `json:"port"`
 	Debug               *bool    `json:"debug"`
-	AllowedDomains []string `json:"allowedDomains"`
 	HashKey             *string  `json:"hashKey"`
 	BlockKey            *string  `json:"blockKey"`
 }
@@ -111,10 +110,6 @@ func (c *config) loadFromEnv(env func(string) string) {
 	block := env("PHRAG_BLOCK_KEY")
 	if block != "" {
 		c.BlockKey = &block
-	}
-	allowedDomains := env("PHRAG_ALLOWED_DOMAINS")
-	if allowedDomains != "" {
-		c.DidAllowList = strings.Split(didList, ",")
 	}
 }
 

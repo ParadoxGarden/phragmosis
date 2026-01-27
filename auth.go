@@ -29,9 +29,6 @@ func (*token) valid() bool {
 	// TODO check token expiry
 	return true
 }
-func writeToken(access string, refresh string, subject *string) {
-
-}
 
 type validationError string
 
@@ -47,9 +44,6 @@ func getDiscordToken(ctx context.Context, discord oauth2.Config, code string, PK
 		return nil, validationError("error validating token")
 	}
 	return token, nil
-}
-func checkUserToken() {
-
 }
 func getUserMeta(r *http.Request, sc securecookie.SecureCookie) (*oauthMeta, error) {
 	cookie, err := r.Cookie("oauthMeta")
