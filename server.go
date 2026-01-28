@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/bluesky-social/indigo/atproto/auth/oauth"
-	//"github.com/bluesky-social/indigo/atproto/syntax"
 	"github.com/bluesky-social/indigo/atproto/identity"
+	"github.com/bluesky-social/indigo/atproto/syntax"
 	"github.com/gorilla/securecookie"
 	"golang.org/x/oauth2"
 )
@@ -159,8 +159,22 @@ func (s *server) handleClientMetadata() (w http.ResponseWriter, r *http.Request)
 	return
 }
 func (s *server) handleResolveDid(w http.ResponseWriter, r *http.Request) {
-
-	//s.didCache.ResolveHandle(r.Context(), )
+	hand, err := syntax.ParseHandle(r.FormValue("handle"))
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, "unable to parse handle:", err)
+		return
+	}
+	did, err := s.didCache.ResolveHandle(r.Context(), hand)
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, "unable to resolve did", err)
+		return
+	}
+	packdid, err := did.MarshalText()
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, "unable to marshall did:", err)
+		return
+	}
+	w.Write(packdid)
 }
 
 func (s *server) errorHandler(w http.ResponseWriter, r *http.Request) {
