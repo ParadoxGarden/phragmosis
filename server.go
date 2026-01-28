@@ -162,19 +162,22 @@ func (s *server) handleResolveDid(w http.ResponseWriter, r *http.Request) {
 	hand, err := syntax.ParseHandle(r.FormValue("handle"))
 	if err != nil {
 		slog.Log(r.Context(), slog.LevelError, "unable to parse handle:", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	did, err := s.didCache.ResolveHandle(r.Context(), hand)
+	ident, err := s.didCache.LookupHandle(r.Context(), hand)
 	if err != nil {
-		slog.Log(r.Context(), slog.LevelError, "unable to resolve did", err)
+		slog.Log(r.Context(), slog.LevelError, "unable to resolve ident: ", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	packdid, err := did.MarshalText()
+	jsonIdent, err := json.Marshal(ident.DIDDocument())
 	if err != nil {
-		slog.Log(r.Context(), slog.LevelError, "unable to marshall did:", err)
+		slog.Log(r.Context(), slog.LevelError, "unable to json marshall did document:", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write(packdid)
+	w.Write(jsonIdent)
 }
 
 func (s *server) errorHandler(w http.ResponseWriter, r *http.Request) {
