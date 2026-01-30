@@ -2,6 +2,7 @@ body {
   min-height: 100vh;
   display: grid;
   place-items: center;
+  background-color: #1C1917;
 }
 
 .login-card {
@@ -9,7 +10,9 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 1rem;
+  border-radius: 8px;
   padding: 2rem;
+  background-color: #292524;
 }
 
 .btn {
@@ -17,13 +20,15 @@ body {
   border: none;
   border-radius: 4px;
   font-size: 1rem;
-  background: #5865F2;
+  background-color: #5865F2;
+  color: #A8A29E;
   cursor: pointer;
 }
 
 .input-group {
   display: flex;
-  border: 2px solid #ccc;
+  border: 2px solid #788F75;
+  color: #A8A29E;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -33,13 +38,16 @@ body {
   padding: 0.75rem 1rem;
   border: none;
   outline: none;
+  background-color: #292524;
+  color: #A8A29E;
   font-size: 1rem;
 }
 
 .input-group button {
   padding: 0.75rem 1.5rem;
   border: none;
-  color: white;
+  background-color: darkslategray;
+  color: #A8A29E;
   font-size: 1rem;
   cursor: pointer;
 }

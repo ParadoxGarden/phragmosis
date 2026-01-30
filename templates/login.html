@@ -3,21 +3,18 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="static/phragmosis.css">
+  <script src="static/phragmosis.js" defer></script>
 </head>
 
 <body>
-  <div class="center-card">
+  <div class="login-card">
     {{if .DiscordVisible}}
     <a href="{{.DiscordRedirect}}">
       <button class="btn">login with discord!</button></a>
     {{end}}
     {{if .ATProtoVisible}}
-    <a href="{{.ATProtoRedirect}}">
-      <form>
         <div class="input-group"><input type="text" id="handle" placeholder="alice.bsky.social">
-          <button type="button">login with atproto!</button>
-      </form>
-    </a>
+          <button type="button" id="atBtn">login with @proto!</button></div>
     {{end}}
   </div>
 </body>
