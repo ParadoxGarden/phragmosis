@@ -146,9 +146,12 @@ func (s *server) writeCookie(w http.ResponseWriter, name string, value string, m
 
 	http.SetCookie(w, c)
 }
-func (s *server) handleClientMetadata() (w http.ResponseWriter, r *http.Request) {
-	doc := s.atprotoOAuth.Config.ClientMetadata()
 
+var name = "phragmosis"
+
+func (s *server) handleClientMetadata(w http.ResponseWriter, r *http.Request) {
+	doc := s.atprotoOAuth.Config.ClientMetadata()
+	doc.ClientName = &name
 	// if this is is a confidential client, need to set doc.JWKSURI, and implement a handler
 
 	w.Header().Set("Content-Type", "application/json")
@@ -156,9 +159,9 @@ func (s *server) handleClientMetadata() (w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	return
 }
 func (s *server) handleResolveDid(w http.ResponseWriter, r *http.Request) {
+	var ctx = r.Context()
 	hand, err := syntax.ParseHandle(r.FormValue("handle"))
 	if err != nil {
 		slog.Log(r.Context(), slog.LevelError, "unable to parse handle:", err)
@@ -167,17 +170,26 @@ func (s *server) handleResolveDid(w http.ResponseWriter, r *http.Request) {
 	}
 	ident, err := s.didCache.LookupHandle(r.Context(), hand)
 	if err != nil {
-		slog.Log(r.Context(), slog.LevelError, "unable to resolve ident: ", err)
+		slog.Log(ctx, slog.LevelError, "unable to resolve ident: ", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	jsonIdent, err := json.Marshal(ident.DIDDocument())
+	redir, err := s.atprotoOAuth.StartAuthFlow(r.Context(), ident.DID.String())
 	if err != nil {
-		slog.Log(r.Context(), slog.LevelError, "unable to json marshall did document:", err)
+		slog.Log(ctx, slog.LevelError, "unable to start auth flow (bad pds?):", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write(jsonIdent)
+	if err := json.NewEncoder(w).Encode(map[string]string{"redirect": redir}); err != nil {
+		slog.Log(ctx, slog.LevelError, "", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+}
+
+func (s *server) atprotoHandler(w http.ResponseWriter, r *http.Request) {
+
 }
 
 func (s *server) errorHandler(w http.ResponseWriter, r *http.Request) {
@@ -266,6 +278,11 @@ func newServer(c config, cookie securecookie.SecureCookie, client http.Client, l
 		loginTemplate: loginTemplate,
 		errorTemplate: errorTemplate,
 	}
+	if c.Subdomain != nil {
+		s.selfDomain = fmt.Sprintf("%s.%s", *c.Subdomain, *c.DomainName)
+	} else {
+		s.selfDomain = *c.DomainName
+	}
 	if c.DiscordGuildID != nil && c.DiscordClientID != nil && c.DiscordClientSecret != nil {
 		s.discord = true
 	} else {
@@ -277,12 +294,11 @@ func newServer(c config, cookie securecookie.SecureCookie, client http.Client, l
 		cd := identity.NewCacheDirectory(&identity.BaseDirectory{}, 10000, SEVEN_DAYS, SEVEN_DAYS, SEVEN_DAYS)
 		s.didCache = &cd
 		config := oauth.NewPublicConfig(
-			"https://app.example.com/client-metadata.json",
-			"https://app.example.com/oauth/callback",
-			[]string{"atproto", "repo:app.bsky.feed.post?action=create"},
+			fmt.Sprintf("https://%s/client-metadata.json", s.selfDomain),
+			fmt.Sprintf("https://%s/callback/@proto", s.selfDomain),
+			[]string{"atproto"},
 		)
 
-		// clients are "public" by default, but if they have secure access to a secret attestation key can be "confidential"
 		//	if CLIENT_SECRET_KEY != "" {
 		//		priv, err := crypto.ParsePrivateMultibase(CLIENT_SECRET_KEY)
 		//		if err != nil {
@@ -309,11 +325,6 @@ func newServer(c config, cookie securecookie.SecureCookie, client http.Client, l
 			Scopes:       []string{"identify", "guilds"},
 			Endpoint:     s.discordEndpoints,
 		}
-	}
-	if c.Subdomain != nil {
-		s.selfDomain = fmt.Sprintf("%s.%s", *c.Subdomain, *c.DomainName)
-	} else {
-		s.selfDomain = *c.DomainName
 	}
 	s.cfg = c
 	return s
@@ -346,8 +357,9 @@ func main() {
 	http.HandleFunc("/", s.loginHandler)
 	http.HandleFunc("/auth", s.authHandler)
 	http.HandleFunc("/callback/discord", s.discordHandler)
-	//http.HandleFunc("/callback/@proto", s.atprotoHandler)
-	http.HandleFunc("/resolveDid", s.handleResolveDid)
+	http.HandleFunc("/callback/@proto", s.atprotoHandler)
+	http.HandleFunc("/client-metadata.json", s.handleClientMetadata)
+	http.HandleFunc("/handleLogin", s.handleResolveDid)
 	http.HandleFunc("/error", s.errorHandler)
 	content, err := fs.Sub(static, "static")
 	if err != nil {
