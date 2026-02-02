@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -114,14 +115,14 @@ func (s *server) authHandler(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, "login page being sent to someone with no cookie", err, slog.LevelDebug)
 		return
 	}
-	auth := &oauth2.Token{}
-	err = s.sc.Decode("token", cookie.Value, &auth)
+	tok := &token{}
+	err = s.sc.Decode("token", cookie.Value, tok)
 	if err != nil {
 		s.writeCookie(w, "token", "", -1)
 		s.fail(w, r, "token failed to decode", err, slog.LevelWarn)
 		return
 	}
-	if !auth.Valid() {
+	if !tok.Valid() {
 		s.writeCookie(w, "token", "", -1)
 		s.fail(w, r, "token did not pass validation", err, slog.LevelError)
 		return
@@ -187,8 +188,34 @@ func (s *server) handleResolveDid(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
-
 func (s *server) atprotoHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	ses, err := s.atprotoOAuth.ProcessCallback(r.Context(), r.Form)
+	if err != nil {
+		return
+	}
+	ometa, err := getUserMeta(r, s.sc)
+	if err != nil {
+		s.fail(w, r, "user metadata validation failed", err, slog.LevelError)
+	}
+	tok := token{
+		Access: ses.AccessToken,
+		Refresh: ses.RefreshToken,
+		Subject: (*string)(&ses.AccountDID),
+		Iat: time.Now().String(),
+	}
+	enc, err := s.sc.Encode("token", tok)
+	if err != nil {
+		s.fail(w, r, "error encoding token", err, slog.LevelError)
+		return
+	}
+
+	if slices.Contains(s.cfg.DidAllowList, ses.AccountDID.String()) {
+		s.writeCookie(w, "token", enc, int(time.Hour)*24*7)
+		slog.Log(r.Context(), slog.LevelInfo, "successful flow, user has logged in correctly")
+		http.Redirect(w, r, "https://"+ometa.Redirect, http.StatusFound)
+		return
+	}
 
 }
 
@@ -205,7 +232,7 @@ func (s *server) discordHandler(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, "user metadata validation failed", err, slog.LevelError)
 	}
 	code := r.FormValue("code")
-	token, err := getDiscordToken(r.Context(), s.discordOAuth, code, ometa.PKCECode)
+	discordTok, err := getDiscordToken(r.Context(), s.discordOAuth, code, ometa.PKCECode)
 	if err != nil {
 		s.fail(w, r, "token did not pass validation", err, slog.LevelError)
 		s.writeCookie(w, "token", "", 604800)
@@ -216,10 +243,23 @@ func (s *server) discordHandler(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, "creation of http request from static resources FAILED somehow", err, slog.LevelError)
 		return
 	}
-	token.SetAuthHeader(req)
+	discordTok.SetAuthHeader(req)
 	guildsResp, err := s.cl.Do(req)
 	if err != nil {
 		s.fail(w, r, "discord api error", err, slog.LevelError)
+		return
+	}
+	subject := "token"
+	tok := token{
+		Access: discordTok.AccessToken,
+		Refresh: discordTok.RefreshToken,
+		Subject: &subject,
+		Iat: time.Now().String(),
+	}
+
+	enc, err := s.sc.Encode("token", tok)
+	if err != nil {
+		s.fail(w, r, "error encoding token", err, slog.LevelError)
 		return
 	}
 	var guilds []struct {
@@ -228,11 +268,6 @@ func (s *server) discordHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.NewDecoder(guildsResp.Body).Decode(&guilds)
 	if err != nil {
 		s.fail(w, r, "discord api error", err, slog.LevelError)
-		return
-	}
-	enc, err := s.sc.Encode("token", token)
-	if err != nil {
-		s.fail(w, r, "error encoding token", err, slog.LevelError)
 		return
 	}
 	for _, g := range guilds {

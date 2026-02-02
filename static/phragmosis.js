@@ -22,9 +22,7 @@ atBtn.addEventListener('click', async function() {
         console.log(loginResponse)
         return
     }
-    
     const data = await loginResponse.json()
     console.log(data.redirect)
     window.location.href = data.redirect; 
-
 });

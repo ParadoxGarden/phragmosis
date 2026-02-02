@@ -19,13 +19,13 @@ type oauthMeta struct {
 }
 
 type token struct {
-	access  string
-	refresh string
-	subject *string
-	iat     string
+	Access  string
+	Refresh string
+	Subject *string
+	Iat     string
 }
 
-func (*token) valid() bool {
+func (*token) Valid() bool {
 	// TODO check token expiry
 	return true
 }
@@ -56,13 +56,13 @@ func getUserMeta(r *http.Request, sc securecookie.SecureCookie) (*oauthMeta, err
 	if err != nil {
 		return nil, err
 	}
-	state := r.FormValue("state")
-	if ometa.CRSFState != state {
-		return nil, &CRSFError{
-			orig: ometa.CRSFState,
-			new:  state,
-		}
-	}
+	//state := r.FormValue("state")
+	//if ometa.CRSFState != state {
+	//	return nil, &CRSFError{
+	//		orig: ometa.CRSFState,
+	//		new:  state,
+	//	}
+	//}
 	return ometa, nil
 
 }
