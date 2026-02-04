@@ -23,7 +23,7 @@ import (
 )
 
 func verifyRedirect(redir string, domain string) (bool, error) {
-	if !strings.HasPrefix("https://", redir) && !strings.HasPrefix(redir, "/") {
+	if !strings.HasPrefix(redir,"https://") && !strings.HasPrefix(redir, "/") {
 		redirect, err := url.JoinPath("https://", redir)
 		if err != nil {
 			return false, err
