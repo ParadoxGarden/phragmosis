@@ -23,7 +23,7 @@ import (
 )
 
 func verifyRedirect(redir string, domain string) (bool, error) {
-	if !strings.HasPrefix(redir,"https://") && !strings.HasPrefix(redir, "/") {
+	if !strings.HasPrefix(redir, "https://") && !strings.HasPrefix(redir, "/") {
 		redirect, err := url.JoinPath("https://", redir)
 		if err != nil {
 			return false, err
@@ -74,6 +74,7 @@ func (s *server) loginHandler(w http.ResponseWriter, r *http.Request) {
 		"DiscordRedirect": discordURL,
 		"DiscordVisible":  s.discord,
 		"ATProtoVisible":  s.atproto,
+		"PageTitle":       s.cfg.PageTitle,
 	})
 	if err != nil {
 		s.fail(w, r, "login page rendering failed", err, slog.LevelError)
@@ -199,10 +200,10 @@ func (s *server) atprotoHandler(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, "user metadata validation failed", err, slog.LevelError)
 	}
 	tok := token{
-		Access: ses.AccessToken,
+		Access:  ses.AccessToken,
 		Refresh: ses.RefreshToken,
 		Subject: (*string)(&ses.AccountDID),
-		Iat: time.Now().String(),
+		Iat:     time.Now().String(),
 	}
 	enc, err := s.sc.Encode("token", tok)
 	if err != nil {
@@ -223,7 +224,8 @@ func (s *server) errorHandler(w http.ResponseWriter, r *http.Request) {
 
 	// TODO make error page nice
 	s.errorTemplate.Execute(w, map[string]interface{}{
-		"rzn": r.FormValue("rzn"),
+		"rzn":       r.FormValue("rzn"),
+		"PageTitle": s.cfg.PageTitle,
 	})
 }
 func (s *server) discordHandler(w http.ResponseWriter, r *http.Request) {
@@ -251,10 +253,10 @@ func (s *server) discordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	subject := "token"
 	tok := token{
-		Access: discordTok.AccessToken,
+		Access:  discordTok.AccessToken,
 		Refresh: discordTok.RefreshToken,
 		Subject: &subject,
-		Iat: time.Now().String(),
+		Iat:     time.Now().String(),
 	}
 
 	enc, err := s.sc.Encode("token", tok)

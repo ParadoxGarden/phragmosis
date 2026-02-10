@@ -21,9 +21,11 @@ type config struct {
 	Debug               *bool    `json:"debug"`
 	HashKey             *string  `json:"hashKey"`
 	BlockKey            *string  `json:"blockKey"`
+	PageTitle           *string  `json:"pageTitle"`
 }
 
 var configPath = "./config.json"
+
 // load precedence
 // generated keys < json < ENV
 func loadConfig() (*config, error) {
@@ -62,6 +64,7 @@ func (c *config) validateConfig() error {
 	}
 	return nil
 }
+
 // this is ugly but it's explicit
 func (c *config) loadFromEnv(env func(string) string) {
 	didList := env("PHRAG_DID_ALLOW_LIST")
@@ -110,6 +113,10 @@ func (c *config) loadFromEnv(env func(string) string) {
 	block := env("PHRAG_BLOCK_KEY")
 	if block != "" {
 		c.BlockKey = &block
+	}
+	title := env("PHRAG_PAGE_TITLE")
+	if title != "" {
+		c.PageTitle = &title
 	}
 }
 

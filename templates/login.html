@@ -1,21 +1,34 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{.PageTitle}}</title>
   <link rel="stylesheet" href="static/phragmosis.css">
   <script src="static/phragmosis.js" defer></script>
 </head>
 
 <body>
   <div class="login-card">
-    {{if .DiscordVisible}}
-    <a href="{{.DiscordRedirect}}">
-      <button class="btn">login with discord!</button></a>
-    {{end}}
-    {{if .ATProtoVisible}}
-        <div class="input-group"><input type="text" id="handle" placeholder="alice.bsky.social">
-          <button type="button" id="atBtn">login with @proto!</button></div>
-    {{end}}
+    <img src="static/logo.svg" alt="Phragmosis logo image ()" class="logo">
+
+    <div class="login-methods">
+      {{if .DiscordVisible}}
+      <a href="{{.DiscordRedirect}}" class="btn btn-discord">login with discord</a>
+      {{end}}
+
+      {{if and .DiscordVisible .ATProtoVisible}}
+      <div class="divider"><span>or</span></div>
+      {{end}}
+
+      {{if .ATProtoVisible}}
+      <div class="input-group">
+        <input type="text" id="handle" placeholder="alice.bsky.social">
+        <button type="button" id="atBtn">login with @proto</button>
+      </div>
+      {{end}}
+    </div>
   </div>
 </body>
 

@@ -1,36 +1,96 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 body {
   min-height: 100vh;
   display: grid;
   place-items: center;
   background-color: #1C1917;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #D6D3D1;
 }
 
 .login-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 2rem;
   border-radius: 8px;
-  padding: 2rem;
+  padding: 2.5rem 3rem;
   background-color: #292524;
+  border: 1px solid #3F3B39;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 340px;
 }
 
+.logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.login-methods {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Discord button */
 .btn {
+  display: block;
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 4px;
-  font-size: 1rem;
-  background-color: #5865F2;
-  color: #A8A29E;
+  font-size: 0.95rem;
   cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: filter 0.15s;
 }
 
+.btn:hover {
+  filter: brightness(1.15);
+}
+
+.btn-discord {
+  background-color: #5865F2;
+  color: #fff;
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #78716C;
+  font-size: 0.8rem;
+  text-transform: lowercase;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: #3F3B39;
+}
+
+/* ATProto input group */
 .input-group {
   display: flex;
-  border: 2px solid #788F75;
-  color: #A8A29E;
-  border-radius: 8px;
+  border: 1px solid #3F3B39;
+  border-radius: 4px;
   overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.input-group:focus-within {
+  border-color: #788F75;
 }
 
 .input-group input {
@@ -38,16 +98,27 @@ body {
   padding: 0.75rem 1rem;
   border: none;
   outline: none;
-  background-color: #292524;
-  color: #A8A29E;
-  font-size: 1rem;
+  background-color: transparent;
+  color: #D6D3D1;
+  font-size: 0.95rem;
+  min-width: 0;
+}
+
+.input-group input::placeholder {
+  color: #78716C;
 }
 
 .input-group button {
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   border: none;
-  background-color: darkslategray;
-  color: #A8A29E;
-  font-size: 1rem;
+  background-color: #3D5A3A;
+  color: #D6D3D1;
+  font-size: 0.95rem;
   cursor: pointer;
+  white-space: nowrap;
+  transition: filter 0.15s;
+}
+
+.input-group button:hover {
+  filter: brightness(1.15);
 }
