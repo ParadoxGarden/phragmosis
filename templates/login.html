@@ -11,11 +11,14 @@
 
 <body>
   <div class="login-card">
-    <img src="static/logo.svg" alt="Phragmosis logo image ()" class="logo">
+    <img src="static/logo.svg" alt="Phragmosis logo image" class="logo">
 
     <div class="login-methods">
+      log in below:
       {{if .DiscordVisible}}
-      <a href="{{.DiscordRedirect}}" class="btn btn-discord">login with discord</a>
+      <a href="{{.DiscordRedirect}}" class="btn btn-discord">
+        <img src="static/discord-white.svg" alt=""> Discord
+      </a>
       {{end}}
 
       {{if and .DiscordVisible .ATProtoVisible}}
@@ -25,7 +28,7 @@
       {{if .ATProtoVisible}}
       <div class="input-group">
         <input type="text" id="handle" placeholder="alice.bsky.social">
-        <button type="button" id="atBtn">login with @proto</button>
+        <button type="button" id="atBtn">@proto</button>
       </div>
       {{end}}
     </div>

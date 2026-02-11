@@ -36,8 +36,11 @@ body {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  text-align: center;
   gap: 1rem;
   width: 100%;
+  text-color: #78716C;
+  font-size: 0.9rem;
 }
 
 /* Discord button */
@@ -58,18 +61,25 @@ body {
 }
 
 .btn-discord {
-  background-color: #5865F2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #6A73C1;
   color: #fff;
 }
 
-/* Divider */
+.btn-discord img {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
 .divider {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   color: #78716C;
-  font-size: 0.8rem;
-  text-transform: lowercase;
+  font-size: 0.9rem;
 }
 
 .divider::before,
