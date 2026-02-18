@@ -36,6 +36,7 @@ type validationError string
 func (e validationError) Error() string {
 	return string(e)
 }
+
 // make discord token exchange and ensure token recieved is good
 func getDiscordToken(ctx context.Context, discord oauth2.Config, code string, PKCE string) (*oauth2.Token, error) {
 	token, err := discord.Exchange(ctx, code, oauth2.VerifierOption(PKCE))
@@ -47,6 +48,7 @@ func getDiscordToken(ctx context.Context, discord oauth2.Config, code string, PK
 	}
 	return token, nil
 }
+
 // read the user's oauth metadata from browser cookies
 func getUserMeta(r *http.Request, sc securecookie.SecureCookie) (*oauthMeta, error) {
 	cookie, err := r.Cookie("oauthMeta")
@@ -59,13 +61,13 @@ func getUserMeta(r *http.Request, sc securecookie.SecureCookie) (*oauthMeta, err
 	if err != nil {
 		return nil, err
 	}
-	//state := r.FormValue("state")
-	//if ometa.CRSFState != state {
-	//	return nil, &CRSFError{
-	//		orig: ometa.CRSFState,
-	//		new:  state,
-	//	}
-	//}
+	state := r.FormValue("state")
+	if ometa.CRSFState != state {
+		return nil, &CRSFError{
+			orig: ometa.CRSFState,
+			new:  state,
+		}
+	}
 	return ometa, nil
 
 }
@@ -78,6 +80,7 @@ type CRSFError struct {
 func (e *CRSFError) Error() string {
 	return fmt.Sprintf("CSRF validation error: %s vs %s", e.orig, e.new)
 }
+
 // initialize securecookie with config provided (or generate) keys
 func initSecureCookie(blockKey *string, hashKey *string) (*securecookie.SecureCookie, error) {
 	var sc *securecookie.SecureCookie
@@ -105,6 +108,7 @@ func initSecureCookie(blockKey *string, hashKey *string) (*securecookie.SecureCo
 	sc.MaxAge(604800)
 	return sc, nil
 }
+
 // return an array of bytes size n
 func getRandBytes(n int) ([]byte, error) {
 	dat := make([]byte, n)
@@ -114,7 +118,8 @@ func getRandBytes(n int) ([]byte, error) {
 	}
 	return dat, nil
 }
-// generate the oauthmetadata struct 
+
+// generate the oauthmetadata struct
 func genOAuthMeta(redirect string) (*oauthMeta, error) {
 	stateRand, err := getRandBytes(16)
 	if err != nil {

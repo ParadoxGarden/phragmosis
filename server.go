@@ -25,10 +25,11 @@ import (
 // ensure user redirect isn't malicious or malformed
 func verifyRedirect(redir string, domain string) (string, error) {
 
+	slog.Info("testing redirect: ", redir)
 	if redir == "/" {
 		return "https://" + domain + "/", nil
 	}
-	if !strings.HasPrefix(redir, "http://") && !strings.HasPrefix(redir, "https://") {
+	if !strings.HasPrefix(redir, "https://") {
 		redir = "https://" + redir
 	}
 	u, err := url.Parse(redir)
@@ -89,7 +90,7 @@ func (s *server) fail(w http.ResponseWriter, r *http.Request, rzn string, err er
 	}
 }
 
-// send the user to their intended destination (happy path)
+// send the user to some other page
 func (s *server) redirect(w http.ResponseWriter, r *http.Request, path string) error {
 	host := r.Header.Get("X-Forwarded-Host")
 	uri := r.Header.Get("X-Forwarded-Uri")
@@ -219,7 +220,7 @@ func (s *server) atprotoHandler(w http.ResponseWriter, r *http.Request) {
 	if slices.Contains(s.cfg.DidAllowList, ses.AccountDID.String()) {
 		s.writeCookie(w, "token", enc, int(time.Hour)*24*7)
 		slog.Log(r.Context(), slog.LevelInfo, "successful flow, user has logged in correctly")
-		http.Redirect(w, r, "https://"+ometa.Redirect, http.StatusFound)
+		http.Redirect(w, r, ometa.Redirect, http.StatusFound)
 		return
 	}
 
@@ -285,7 +286,7 @@ func (s *server) discordHandler(w http.ResponseWriter, r *http.Request) {
 		if *s.cfg.DiscordGuildID == g.ID {
 			s.writeCookie(w, "token", enc, int(time.Hour)*24*7)
 			slog.Log(r.Context(), slog.LevelInfo, "successful flow, user has logged in correctly")
-			http.Redirect(w, r, "https://"+ometa.Redirect, http.StatusFound)
+			http.Redirect(w, r, ometa.Redirect, http.StatusFound)
 			return
 		}
 	}
