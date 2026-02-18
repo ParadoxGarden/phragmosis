@@ -22,45 +22,34 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func verifyRedirect(redir string, domain string) (bool, error) {
-	if !strings.HasPrefix(redir, "https://") && !strings.HasPrefix(redir, "/") {
-		redirect, err := url.JoinPath("https://", redir)
-		if err != nil {
-			return false, err
-		}
-		redir = redirect
+func verifyRedirect(redir string, domain string) (string, error) {
+
+	if redir == "/" {
+		return "https://" + domain + "/", nil
 	}
-	redirect, err := url.Parse(redir)
+	if !strings.HasPrefix(redir, "http://") && !strings.HasPrefix(redir, "https://") {
+		redir = "https://" + redir
+	}
+	u, err := url.Parse(redir)
 	if err != nil {
-		return false, err
+		return "", fmt.Errorf("invalid redirect URL: %w", err)
 	}
-	goodDom := false
-	if redirect.Host == domain {
-		goodDom = true
+	hostname := u.Hostname()
+	if hostname != domain && !strings.HasSuffix(hostname, "."+domain) {
+		return "", fmt.Errorf("redirect domain %s not allowed (expected %s or subdomain)", hostname, domain)
 	}
-	if strings.HasPrefix(redir, "/") {
-		goodDom = true
-	}
-	if strings.HasSuffix(redirect.Hostname(), "."+domain) {
-		goodDom = true
-	}
-	if strings.HasPrefix(redir, "//") {
-		return false, err
-	}
-	if !goodDom {
-		return false, err
-	}
-	return true, nil
+
+	return u.String(), nil
 }
 func (s *server) loginHandler(w http.ResponseWriter, r *http.Request) {
 	redir := r.FormValue("redirect")
-	isRedirectGood, err := verifyRedirect(redir, *s.cfg.DomainName)
-	if !isRedirectGood {
-		return
-	}
-	ometa, err := genOAuthMeta(redir)
+	goodRedirect, err := verifyRedirect(redir, *s.cfg.DomainName)
 	if err != nil {
-		return
+		s.fail(w, r, "error verifying redirect", err, slog.LevelError)
+	}
+	ometa, err := genOAuthMeta(goodRedirect)
+	if err != nil {
+		s.fail(w, r, "error generating oauth metadata", err, slog.LevelError)
 	}
 	enc, err := s.sc.Encode("oauthMeta", *ometa)
 	if err != nil {
@@ -268,6 +257,7 @@ func (s *server) discordHandler(w http.ResponseWriter, r *http.Request) {
 		ID string `json:"id"`
 	}
 	err = json.NewDecoder(guildsResp.Body).Decode(&guilds)
+	defer guildsResp.Body.Close()
 	if err != nil {
 		s.fail(w, r, "discord api error", err, slog.LevelError)
 		return
