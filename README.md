@@ -14,11 +14,15 @@ forward auth with caddy
 
 oauth with discord
 
-## planned features
 oauth with atproto
+
+## planned features
+
+atproto confidential client option
 
 tailnet bypass via local socket
 
+testing of full "happy path"
 
 ### other notes
 by default user sessions expire on phragmosis restart, this is intended behavior.
