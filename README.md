@@ -25,7 +25,7 @@ tailnet bypass via local socket
 testing of full "happy path"
 
 ### other notes
-by default user sessions expire on phragmosis restart, this is intended behavior.
+by default user sessions expire on server restart, this is intended behavior as there is no built in session manager / admin panel.
 
 see `./config.json.example` and `./Caddyfile.example` for examples of setup 
 
